@@ -908,10 +908,18 @@ public class Main extends Activity {
         });
     }
 
+    static final String[] CAR_COLORS = {"plata", "negro", "blanco", "rojo", "azul"};
+
+    private String carColor() {
+        String c = prefs.getString("car_color", "plata");
+        for (int i = 0; i < CAR_COLORS.length; i++) if (CAR_COLORS[i].equals(c)) return c;
+        return "plata";
+    }
+
     private void buildCarCard() {
         final FrameLayout card = card(carX, 64, 300, cardH, CARD);
         final float dy = cardH - 380;   // barra de abajo compacta: la foto crece y la velocidad baja
-        carTv = tv(prefs.getString("car_name", "Mi vehículo"), 20, TEXT, true);
+        carTv = tv(prefs.getString("car_name", "Chevrolet Vectra"), 20, TEXT, true);
         place(card, carTv, 20, 16, 260, 26);
         TextView chip = tv(prefs.getString("car_tag", ""), 11, Color.WHITE, true);
         chipTv = chip;
@@ -930,19 +938,16 @@ public class Main extends Activity {
                 public boolean onLongClick(View v) { photoMenu(); return true; }
             });
         } else {
-            LinearLayout ph = new LinearLayout(this);
-            ph.setOrientation(LinearLayout.VERTICAL);
-            ph.setGravity(Gravity.CENTER);
-            ph.setBackground(round(INNER, 16));
-            ImageView ic = icon("directions_car", 72);
-            ic.setAlpha(0.35f);
-            ph.addView(ic, new LinearLayout.LayoutParams((int) (72 * s), (int) (72 * s)));
-            TextView t = tv("Toca para poner la foto de tu vehículo", 12, MUTED, false);
-            t.setPadding(0, (int) (6 * s), 0, 0);
-            ph.addView(t);
-            place(card, ph, 18, 82, 264, 152 + dy);
-            ph.setOnClickListener(new View.OnClickListener() {
+            // Sin foto propia: se muestra la ilustración del Chevrolet Vectra hatchback 5 puertas (color elegible en Ajustes).
+            ImageView car = new ImageView(this);
+            car.setImageBitmap(asset("car_" + carColor() + ".png"));
+            car.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            place(card, car, 18, 78, 264, 160 + dy);
+            car.setOnClickListener(new View.OnClickListener() {
                 public void onClick(View v) { pickPhoto(); }
+            });
+            car.setOnLongClickListener(new View.OnLongClickListener() {
+                public boolean onLongClick(View v) { photoMenu(); return true; }
             });
         }
 
@@ -2636,7 +2641,7 @@ public class Main extends Activity {
             .setPositiveButton("Empezar", new DialogInterface.OnClickListener() {
                 public void onClick(DialogInterface d, int w) {
                     ask("user_name", "¿Cómo te llamas?", "", new Runnable() { public void run() {
-                    ask("car_name", "Nombre del vehículo (ej.: Mazda 2, Spark GT)", "Mi vehículo", new Runnable() { public void run() {
+                    ask("car_name", "Nombre del vehículo (ej.: Chevrolet Vectra)", "Chevrolet Vectra", new Runnable() { public void run() {
                     ask("car_tag", "Etiqueta corta (versión o placa). Déjalo vacío si no quieres", "", new Runnable() { public void run() {
                     chooseAccent(new Runnable() { public void run() {
                         prefs.edit().putBoolean("setup_done", true).apply();
@@ -3257,11 +3262,16 @@ public class Main extends Activity {
     private void catVehicle(LinearLayout body) {
         LinearLayout c = section(body, "Datos");
         row(c, "Tu nombre", "Aparece en el saludo de la pantalla de inicio", prefs.getString("user_name", ""), edit("user_name", "Tu nombre", ""));
-        row(c, "Nombre del vehículo", null, prefs.getString("car_name", "Mi vehículo"), edit("car_name", "Nombre del vehículo", "Mi vehículo"));
+        row(c, "Nombre del vehículo", null, prefs.getString("car_name", "Chevrolet Vectra"), edit("car_name", "Nombre del vehículo", "Chevrolet Vectra"));
         row(c, "Etiqueta", "Versión o placa. Déjala vacía para ocultarla", prefs.getString("car_tag", ""), edit("car_tag", "Etiqueta (vacío para ocultarla)", ""));
         LinearLayout f = section(body, "Foto");
         row(f, "Foto del vehículo", "Se recorta y se le quita el fondo automáticamente", CarPhoto.load(this) != null ? "Configurada" : "Sin foto",
             new Runnable() { public void run() { photoMenu(); } });
+        String cc = carColor();
+        segmented(f, "Color del Vectra", "Ilustración que se muestra cuando no hay foto propia", new String[]{"Plata", "Negro", "Blanco", "Rojo", "Azul"},
+            java.util.Arrays.asList(CAR_COLORS).indexOf(cc), new IntCb() { public void on(int i) {
+                prefs.edit().putString("car_color", CAR_COLORS[i]).apply(); rebuild(); showSettings(1);
+            }});
         LinearLayout o = section(body, "Cambio de aceite");
         toggle(o, "Recordatorio de cambio de aceite", "Se muestra al lado de la velocidad y avisa cuando toca", oilOn(), new IntCb() { public void on(int i) {
             if (i == 1 && !prefs.contains("odo_base_km")) { oilSetup(); return; }
